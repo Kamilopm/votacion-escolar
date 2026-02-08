@@ -6,13 +6,6 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { autoRefreshToken: false, persistSession: false }
 });
 
-const getHeaders = () => ({
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json'
-});
-
 export default async function handler(req, res) {
   if (req.url === '/api/health' || req.url === '/api/health/') {
     return res.status(200).json({ ok: true });
@@ -38,6 +31,8 @@ export default async function handler(req, res) {
       case 'get-candidates': return await getCandidates(req, res);
       case 'admin': return await handleAdmin(req, res, subEndpoint);
       case 'stats': return await getStats(req, res);
+      case 'config': return await handleConfig(req, res);
+      case 'carnets': return await generateCarnets(req, res);
       default: return res.status(404).json({ error: 'Endpoint no encontrado' });
     }
   } catch (error) {
@@ -46,9 +41,14 @@ export default async function handler(req, res) {
 }
 
 async function checkStatus(req, res) {
-  const { data, error } = await supabase.from('config').select('election_status').eq('id', 1).single();
+  const { data, error } = await supabase.from('config').select('election_status, school_logo_url, school_name').eq('id', 1).single();
   if (error) return res.status(500).json({ error: 'Error al consultar estado' });
-  return res.status(200).json({ open: data.election_status === 'open', status: data.election_status });
+  return res.status(200).json({ 
+    open: data.election_status === 'open', 
+    status: data.election_status,
+    school_logo: data.school_logo_url,
+    school_name: data.school_name
+  });
 }
 
 async function verifyCode(req, res) {
@@ -73,9 +73,49 @@ async function castVote(req, res) {
 }
 
 async function getCandidates(req, res) {
-  const { data, error } = await supabase.from('candidates').select('id, name, party').order('name');
+  const { data, error } = await supabase.from('candidates').select('id, name, party, photo_url').order('name');
   if (error) return res.status(500).json({ error: 'Error al cargar candidatos' });
   return res.status(200).json({ candidates: data });
+}
+
+async function handleConfig(req, res) {
+  if (req.method === 'GET') {
+    const { data, error } = await supabase.from('config').select('school_logo_url, school_name').eq('id', 1).single();
+    if (error) return res.status(500).json({ error: 'Error' });
+    return res.status(200).json(data);
+  }
+  
+  if (req.method === 'POST') {
+    const adminCode = req.headers['x-admin-code'];
+    const { data: config } = await supabase.from('config').select('admin_code').eq('id', 1).single();
+    if (!config || adminCode !== config.admin_code) return res.status(401).json({ error: 'No autorizado' });
+    
+    const { school_logo_url, school_name } = req.body || {};
+    const { error } = await supabase.from('config').update({ 
+      school_logo_url: school_logo_url || null,
+      school_name: school_name || 'Colegio'
+    }).eq('id', 1);
+    
+    if (error) return res.status(500).json({ error: 'Error al actualizar' });
+    return res.status(200).json({ success: true });
+  }
+  
+  return res.status(405).json({ error: 'Método no permitido' });
+}
+
+async function generateCarnets(req, res) {
+  const adminCode = req.headers['x-admin-code'];
+  const { data: config } = await supabase.from('config').select('admin_code, school_logo_url, school_name').eq('id', 1).single();
+  if (!config || adminCode !== config.admin_code) return res.status(401).json({ error: 'No autorizado' });
+  
+  const { data: students } = await supabase.from('students').select('full_name, grade, course, list_number, access_code').order('grade').order('course').order('list_number');
+  if (!students) return res.status(500).json({ error: 'Error al cargar estudiantes' });
+  
+  return res.status(200).json({ 
+    students, 
+    school_logo: config.school_logo_url,
+    school_name: config.school_name
+  });
 }
 
 async function handleAdmin(req, res, subEndpoint) {
@@ -118,11 +158,18 @@ async function handleCandidates(req, res) {
     return res.status(200).json({ candidates: data });
   }
   if (req.method === 'POST') {
-    const { name, party } = req.body || {};
+    const { name, party, photo_url } = req.body || {};
     if (!name) return res.status(400).json({ error: 'Nombre requerido' });
-    const { data, error } = await supabase.from('candidates').insert([{ name, party: party || '' }]).select().single();
+    const { data, error } = await supabase.from('candidates').insert([{ name, party: party || '', photo_url: photo_url || '' }]).select().single();
     if (error) return res.status(500).json({ error: 'Error al crear candidato' });
     return res.status(200).json({ candidate: data });
+  }
+  if (req.method === 'PUT') {
+    const { id, photo_url } = req.body || {};
+    if (!id) return res.status(400).json({ error: 'ID requerido' });
+    const { error } = await supabase.from('candidates').update({ photo_url }).eq('id', id);
+    if (error) return res.status(500).json({ error: 'Error al actualizar foto' });
+    return res.status(200).json({ success: true });
   }
   if (req.method === 'DELETE') {
     const { id } = req.body || {};
