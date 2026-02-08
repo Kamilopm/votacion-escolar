@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a5f2a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Sistema de Votación - Elección de Personero</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Pantalla de Carga -->
+    <div id="loading-screen" class="screen active">
+        <div class="loading-content">
+            <div class="spinner-large"></div>
+            <h2>Cargando Sistema de Votación</h2>
+            <p>Conectando con la base de datos...</p>
+        </div>
+    </div>
+
+    <!-- Pantalla de Bienvenida -->
+    <div id="welcome-screen" class="screen">
+        <div class="welcome-container">
+            <div class="school-logo" id="school-logo-container">
+                <img src="images/school-placeholder.svg" alt="Logo del Colegio" id="school-logo-img">
+            </div>
+            <h1 id="election-title-main">Elección de Personero</h1>
+            <p class="welcome-message">Sistema de Votación Electrónica</p>
+            
+            <div class="menu-buttons">
+                <button class="btn btn-primary btn-large" onclick="App.showScreen('login-admin')">
+                    <span class="btn-icon">⚙️</span>
+                    Acceso Administrador
+                </button>
+                <button class="btn btn-voting btn-large" onclick="App.showScreen('login-student')">
+                    <span class="btn-icon">🗳️</span>
+                    Emitir Voto
+                </button>
+                <button class="btn btn-secondary btn-large" onclick="App.showScreen('view-results')">
+                    <span class="btn-icon">📊</span>
+                    Ver Resultados
+                </button>
+            </div>
+            
+            <p class="footer-text">© 2026 Sistema de Votación Escolar</p>
+            <div id="connection-status" class="connection-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Conectado</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Login Administrador -->
+    <div id="login-admin" class="screen">
+        <div class="login-container">
+            <button class="back-btn" onclick="App.showScreen('welcome-screen')">
+                <span>←</span> Volver
+            </button>
+            <h2>Acceso Administrador</h2>
+            <form id="admin-login-form">
+                <div class="form-group">
+                    <label for="admin-code">Código de Administrador</label>
+                    <input type="password" id="admin-code" placeholder="Ingrese el código" autocomplete="off">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full btn-large">Ingresar</button>
+            </form>
+            <p class="hint">Código por defecto: ADMIN2026</p>
+        </div>
+    </div>
+
+    <!-- Pantalla de Login Estudiante -->
+    <div id="login-student" class="screen">
+        <div class="login-container">
+            <button class="back-btn" onclick="App.showScreen('welcome-screen')">
+                <span>←</span> Volver
+            </button>
+            <h2>Identificación del Estudiante</h2>
+            <form id="student-login-form">
+                <div class="form-group">
+                    <label for="student-code">Código de Votación</label>
+                    <input type="text" id="student-code" placeholder="Ej: ABC123" 
+                           autocomplete="off" maxlength="6" class="text-center" style="text-transform: uppercase;">
+                </div>
+                <button type="submit" class="btn btn-voting btn-full btn-large">Continuar</button>
+            </form>
+            <p class="hint">Ingrese el código que aparece en su credencial</p>
+            
+            <div class="divider">
+                <span>o</span>
+            </div>
+            
+            <button class="btn btn-secondary btn-full btn-large" onclick="QRScanner.start()">
+                <span class="btn-icon">📷</span>
+                Escanear Código QR
+            </button>
+        </div>
+        
+        <!-- Contenedor del escáner QR -->
+        <div id="qr-scanner-container" class="qr-scanner-container" style="display: none;">
+            <div class="scanner-header">
+                <h3>Escanear Código QR</h3>
+                <button class="close-scanner" onclick="QRScanner.stop()">✕</button>
+            </div>
+            <div id="qr-reader"></div>
+            <p class="scanner-hint">Coloque el código QR dentro del recuadro</p>
+        </div>
+    </div>
+
+    <!-- Panel de Administración -->
+    <div id="admin-panel" class="screen">
+        <header class="admin-header">
+            <div class="header-left">
+                <h1>Panel de Administración</h1>
+            </div>
+            <div class="header-right">
+                <div class="connection-status small">
+                    <span class="status-dot"></span>
+                    <span id="admin-connection-text">Conectado</span>
+                </div>
+                <button class="btn btn-secondary btn-small" onclick="Admin.logout()">Cerrar Sesión</button>
+            </div>
+        </header>
+        
+        <nav class="admin-nav" id="admin-nav">
+            <button class="nav-btn active" data-tab="dashboard">
+                <span class="nav-icon">📊</span>
+                Dashboard
+            </button>
+            <button class="nav-btn" data-tab="candidates">
+                <span class="nav-icon">👥</span>
+                Candidatos
+            </button>
+            <button class="nav-btn" data-tab="students">
+                <span class="nav-icon">🎫</span>
+                Códigos
+            </button>
+            <button class="nav-btn" data-tab="reports">
+                <span class="nav-icon">📈</span>
+                Reportes
+            </button>
+            <button class="nav-btn" data-tab="settings">
+                <span class="nav-icon">⚙️</span>
+                Configuración
+            </button>
+        </nav>
+        
+        <main class="admin-content">
+            <!-- Tab Dashboard -->
+            <section id="tab-dashboard" class="tab-content active">
+                <div class="dashboard-header">
+                    <h2>Panel de Control</h2>
+                    <div class="status-controls">
+                        <button id="btn-close-voting" class="btn btn-warning" onclick="Admin.toggleVotingStatus()">
+                            Cerrar Votación
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card" onclick="Admin.showTab('students')">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-total-students">0</span>
+                            <span class="stat-label">Total Estudiantes</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" onclick="Admin.showTab('reports')">
+                        <div class="stat-icon">🗳️</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-total-votes">0</span>
+                            <span class="stat-label">Votos Emitidos</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-participation">0%</span>
+                            <span class="stat-label">Participación</span>
+                        </div>
+                    </div>
+                    <div class="stat-card" onclick="Admin.showTab('candidates')">
+                        <div class="stat-icon">👨‍🎓</div>
+                        <div class="stat-info">
+                            <span class="stat-value" id="stat-total-candidates">0</span>
+                            <span class="stat-label">Candidatos</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-charts">
+                    <div class="chart-container">
+                        <h3>Resultados en Tiempo Real</h3>
+                        <div id="results-chart" class="chart"></div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Participación por Grado</h3>
+                        <div id="participation-chart" class="chart"></div>
+                    </div>
+                </div>
+                
+                <div class="quick-actions">
+                    <h3>Acciones Rápidas</h3>
+                    <div class="actions-grid">
+                        <button class="btn btn-primary" onclick="PDFGenerator.downloadIdCards()">
+                            🪪 Generar Carnés PDF
+                        </button>
+                        <button class="btn btn-secondary" onclick="PDFGenerator.downloadResults()">
+                            📊 Exportar Resultados
+                        </button>
+                        <button class="btn btn-warning" onclick="Admin.confirmResetVotes()">
+                            🔄 Reiniciar Votación
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab Candidatos -->
+            <section id="tab-candidates" class="tab-content">
+                <div class="section-header">
+                    <h2>Gestión de Candidatos</h2>
+                    <button class="btn btn-primary" onclick="Admin.openCandidateModal()">
+                        + Agregar Candidato
+                    </button>
+                </div>
+                
+                <div id="candidates-list" class="candidates-grid">
+                    <!-- Los candidatos se cargarán aquí -->
+                </div>
+            </section>
+            
+            <!-- Tab Códigos -->
+            <section id="tab-students" class="tab-content">
+                <div class="section-header">
+                    <h2>Gestión de Códigos de Votación</h2>
+                    <button class="btn btn-secondary" onclick="PDFGenerator.downloadIdCards()">
+                        🪪 Imprimir Carnés
+                    </button>
+                </div>
+                
+                <div class="student-tools">
+                    <div class="tool-card">
+                        <h3>Importar desde Excel</h3>
+                        <form id="import-excel-form" class="import-form">
+                            <div class="form-group">
+                                <label for="excel-file">Archivo Excel (.xlsx, .xls, .csv)</label>
+                                <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" required>
+                                <p class="hint">El archivo debe tener columnas: Nombre, Grado, Curso</p>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" id="btn-import-excel">
+                                    📥 Importar Estudiantes
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="Admin.downloadTemplate()">
+                                    📄 Descargar Plantilla
+                                </button>
+                            </div>
+                        </form>
+                        <div id="import-progress" class="import-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="import-progress-fill"></div>
+                            </div>
+                            <p id="import-status">Importando...</p>
+                        </div>
+                        <div id="import-result" class="import-result" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <h3>Generar Nuevos Códigos</h3>
+                        <form id="generate-codes-form" class="inline-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="grade-select">Grado</label>
+                                    <input type="number" id="grade-select" min="1" step="1" value="6" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="course-select">Curso</label>
+                                    <input type="number" id="course-select" min="1" step="1" value="1" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="num-students">Cantidad</label>
+                                    <input type="number" id="num-students" value="30" min="1" max="50">
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary">Generar</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <h3>Resumen de Códigos</h3>
+                        <div class="summary-stats">
+                            <div class="summary-item">
+                                <span class="value" id="summary-total">0</span>
+                                <span class="label">Total Generados</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="value" id="summary-used">0</span>
+                                <span class="label">Utilizados</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="value" id="summary-pending">0</span>
+                                <span class="label">Pendientes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="codes-list">
+                    <h3>Códigos Recientes</h3>
+                    <div class="codes-table-container">
+                        <table id="codes-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Grado</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="codes-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Tab Reportes -->
+            <section id="tab-reports" class="tab-content">
+                <h2>Reportes y Estadísticas</h2>
+                
+                <div class="reports-grid">
+                    <div class="report-card" onclick="PDFGenerator.downloadResults()">
+                        <div class="report-icon">📊</div>
+                        <h3>Resultados Finales</h3>
+                        <p>Reporte completo con gráficos y estadísticas de la votación</p>
+                        <span class="report-action">Generar PDF →</span>
+                    </div>
+                    
+                    <div class="report-card" onclick="Admin.exportCSV()">
+                        <div class="report-icon">📥</div>
+                        <h3>Exportar Datos</h3>
+                        <p>Descargar todos los datos en formato CSV para Excel</p>
+                        <span class="report-action">Descargar →</span>
+                    </div>
+                    
+                    <div class="report-card" onclick="Admin.showLiveMonitor()">
+                        <div class="report-icon">📺</div>
+                        <h3>Monitor en Vivo</h3>
+                        <p>Pantalla de proyección para mostrar resultados en tiempo real</p>
+                        <span class="report-action">Abrir →</span>
+                    </div>
+                </div>
+                
+                <div class="live-preview">
+                    <h3>Vista Previa de Resultados</h3>
+                    <div id="live-results-preview" class="live-results"></div>
+                </div>
+            </section>
+            
+            <!-- Tab Configuración -->
+            <section id="tab-settings" class="tab-content">
+                <h2>Configuración del Sistema</h2>
+                
+                <form id="settings-form" class="settings-form">
+                    <div class="setting-group">
+                        <h3>Información del Colegio</h3>
+                        <div class="form-group">
+                            <label for="school-name">Nombre del Colegio</label>
+                            <input type="text" id="school-name" placeholder="Nombre de la institución">
+                        </div>
+                        <div class="form-group">
+                            <label for="school-logo-upload">Logo del Colegio</label>
+                            <input type="file" id="school-logo-upload" accept="image/*">
+                            <div id="logo-preview" class="logo-preview"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <h3>Parámetros de Votación</h3>
+                        <div class="form-group">
+                            <label for="election-title">Título de la Elección</label>
+                            <input type="text" id="election-title" value="Elección de Personero Estudiantil">
+                        </div>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <h3>Seguridad</h3>
+                        <div class="form-group">
+                            <label for="admin-password">Código de Administrador Actual</label>
+                            <input type="password" id="admin-password" placeholder="Ingrese código actual">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-admin-password">Nuevo Código (opcional)</label>
+                            <input type="password" id="new-admin-password" placeholder="Dejar en blanco para no cambiar">
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-large btn-full">Guardar Configuración</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- Pantalla de Votación -->
+    <div id="voting-screen" class="screen">
+        <div class="voting-header">
+            <div class="voting-progress">
+                <span id="step-indicator">Paso 1 de 4</span>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+            <div class="voting-title">
+                <h2 id="voting-title-text">Elección de Personero</h2>
+            </div>
+            <button class="btn btn-secondary btn-small" onclick="Voting.cancel()">Salir</button>
+        </div>
+        
+        <!-- Paso 1: Verificación -->
+        <div id="voting-step-1" class="voting-step active">
+            <div class="step-content">
+                <div class="verification-icon">✅</div>
+                <h3>¡Código Verificado!</h3>
+                <p>Tu credencial ha sido validada correctamente.</p>
+                <div class="student-info" id="student-info"></div>
+                <p class="confidential-note">
+                    <span class="icon">🔒</span>
+                    Tu voto es completamente confidencial
+                </p>
+                <button class="btn btn-voting btn-large" onclick="Voting.nextStep()">
+                    Continuar para Votar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Paso 2: Selección de Candidato -->
+        <div id="voting-step-2" class="voting-step">
+            <div class="step-content">
+                <h3>Selecciona tu Candidato</h3>
+                <p class="instruction">Toca sobre la fotografía del candidato de tu preferencia</p>
+                
+                <div id="candidates-grid" class="candidates-voting-grid">
+                    <!-- Los candidatos se cargarán aquí -->
+                </div>
+                
+                <div class="voting-nav">
+                    <button class="btn btn-secondary" onclick="Voting.prevStep()">Atrás</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Paso 3: Confirmación -->
+        <div id="voting-step-3" class="voting-step">
+            <div class="step-content">
+                <div class="confirm-box">
+                    <h3>Confirma tu Voto</h3>
+                    <p>¿Estás seguro de tu elección?</p>
+                    
+                    <div class="selected-candidate-preview">
+                        <img id="selected-photo" src="" alt="Candidato">
+                        <h4 id="selected-name"></h4>
+                        <span id="selected-grade" class="candidate-grade"></span>
+                    </div>
+                    
+                    <div class="confirm-buttons">
+                        <button class="btn btn-voting btn-large" onclick="Voting.confirm()">
+                            ✅ Confirmar Voto
+                        </button>
+                        <button class="btn btn-secondary" onclick="Voting.prevStep()">
+                            Cambiar Voto
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Paso 4: Éxito -->
+        <div id="voting-step-4" class="voting-step">
+            <div class="step-content">
+                <div class="success-animation">🎉</div>
+                <h3>¡Voto Registrado!</h3>
+                <p>Tu voto ha sido contabilizado exitosamente.</p>
+                <p class="thank-you">Gracias por participar en la democracia escolar.</p>
+                <div class="vote-receipt">
+                    <small>Comprobante de voto: <span id="receipt-code"></span></small>
+                </div>
+                <button class="btn btn-primary btn-large" onclick="Voting.finish()">
+                    Finalizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pantalla de Error -->
+    <div id="error-screen" class="screen">
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h2 id="error-title">Código Inválido</h2>
+            <p id="error-message">El código que ingresaste no existe o ya fue utilizado.</p>
+            <button class="btn btn-secondary btn-large" onclick="App.showScreen('welcome-screen')">
+                Volver al Inicio
+            </button>
+        </div>
+    </div>
+
+    <!-- Pantalla de Ver Resultados -->
+    <div id="view-results" class="screen">
+        <div class="results-container">
+            <button class="back-btn" onclick="App.showScreen('welcome-screen')">
+                <span>←</span> Volver
+            </button>
+            <h2>Resultados de la Votación</h2>
+            
+            <div class="results-summary">
+                <div class="summary-stat">
+                    <span class="value" id="public-total-votes">0</span>
+                    <span class="label">Votos Emitidos</span>
+                </div>
+                <div class="summary-stat">
+                    <span class="value" id="public-participation">0%</span>
+                    <span class="label">Participación</span>
+                </div>
+            </div>
+            
+            <div id="public-results" class="public-results">
+                <!-- Resultados públicos -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Candidato -->
+    <div id="candidate-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Agregar Candidato</h3>
+                <button class="close-btn" onclick="Admin.closeCandidateModal()">×</button>
+            </div>
+            <form id="candidate-form">
+                <input type="hidden" id="candidate-id">
+                
+                <div class="form-group">
+                    <label for="candidate-name">Nombre Completo</label>
+                    <input type="text" id="candidate-name" placeholder="Nombres y Apellidos" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="candidate-grade">Grado</label>
+                    <select id="candidate-grade" required>
+                        <option value="">Seleccionar...</option>
+                        <option value="6">Sexto</option>
+                        <option value="7">Séptimo</option>
+                        <option value="8">Octavo</option>
+                        <option value="9">Noveno</option>
+                        <option value="10">Décimo</option>
+                        <option value="11">Undécimo</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="candidate-number">Número en Tarjetón</label>
+                    <input type="number" id="candidate-number" min="1" placeholder="Opcional">
+                </div>
+                
+                <div class="form-group">
+                    <label>Fotografía</label>
+                    <div class="photo-upload" onclick="document.getElementById('candidate-photo').click()">
+                        <div id="photo-preview" class="photo-preview">
+                            <span class="placeholder">📷</span>
+                            <span class="text">Click para subir foto</span>
+                        </div>
+                        <input type="file" id="candidate-photo" accept="image/*" hidden>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="Admin.closeCandidateModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Plantilla para candidato en grid -->
+    <template id="candidate-card-template">
+        <div class="candidate-card" data-id="">
+            <div class="candidate-photo">
+                <img src="" alt="Foto">
+            </div>
+            <div class="candidate-info">
+                <h4 class="candidate-name"></h4>
+                <p class="candidate-grade"></p>
+                <span class="candidate-votes">0 votos</span>
+            </div>
+            <div class="candidate-actions">
+                <button class="btn-icon btn-edit" title="Editar">✏️</button>
+                <button class="btn-icon btn-delete" title="Eliminar">🗑️</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    
+    <!-- html5-qrcode para escaneo de códigos QR -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <!-- SheetJS para archivos Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    
+    <!-- Scripts de la aplicación -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/voting.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/pdf-generator.js"></script>
+    <script src="js/qr-scanner.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
