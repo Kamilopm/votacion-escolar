@@ -186,7 +186,7 @@
                     <li>La primera fila debe tener los títulos de columnas</li>
                     <li>Columnas reconocidas automáticamente: <strong>Nombre, Grado, Curso, Lista</strong></li>
                     <li>No importa el orden de las columnas</li>
-                    <li>Si no hay columna "Lista", se asigna automáticamente</li>
+                    <li>Los códigos se generan automáticamente: <strong>Grado+Curso+Lista</strong> (ej: 6101, 6102... 6201, 6202...)</li>
                 </ul>
             </div>
             
@@ -660,7 +660,7 @@
                     full_name: nombre ? String(nombre).trim() : '',
                     grade: parseInt(grado) || 0,
                     course: parseInt(curso) || 1,
-                    list_number: parseInt(lista) || (index + 1)
+                    list_number: parseInt(lista) || 0 // 0 = se asignará automáticamente en el backend
                 };
             }).filter(s => s.full_name && s.grade > 0);
 
@@ -675,12 +675,13 @@
             
             preview.innerHTML = `
                 <div style="background: #dcfce7; border: 2px solid #22c55e; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
-                    ✅ <strong>${mapped.length} estudiantes válidos encontrados</strong> de ${data.length} filas
+                    ✅ <strong>${mapped.length} estudiantes válidos encontrados</strong> de ${data.length} filas<br>
+                    <small>Los códigos se generarán automáticamente reiniciando el número por cada curso (6101, 6102... 6201, 6202...)</small>
                 </div>
                 <h4>Vista previa (primeros 5):</h4>
                 <table style="margin-top: 0.5rem; font-size: 0.875rem; width: 100%;">
                     <thead>
-                        <tr><th>Nombre</th><th>Grado</th><th>Curso</th><th>Lista</th><th>Código</th></tr>
+                        <tr><th>Nombre</th><th>Grado</th><th>Curso</th><th>Lista (orig)</th></tr>
                     </thead>
                     <tbody>
                         ${mapped.slice(0, 5).map(s => `
@@ -688,11 +689,10 @@
                                 <td>${s.full_name}</td>
                                 <td>${s.grade}</td>
                                 <td>${s.course}</td>
-                                <td>${s.list_number}</td>
-                                <td><code style="background: #e2e8f0; padding: 0.25rem 0.5rem; border-radius: 0.25rem;">${s.grade}${s.course}${String(s.list_number).padStart(2, '0')}</code></td>
+                                <td>${s.list_number || 'Auto'}</td>
                             </tr>
                         `).join('')}
-                        ${mapped.length > 5 ? `<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 0.5rem;">... y ${mapped.length - 5} más</td></tr>` : ''}
+                        ${mapped.length > 5 ? `<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 0.5rem;">... y ${mapped.length - 5} más</td></tr>` : ''}
                     </tbody>
                 </table>
             `;
@@ -715,7 +715,7 @@
                     full_name: String(s.full_name || '').trim(),
                     grade: parseInt(s.grade) || 0,
                     course: parseInt(s.course) || 1,
-                    list_number: parseInt(s.list_number) || 1
+                    list_number: parseInt(s.list_number) || 0 // 0 = auto-asignar
                 })).filter(s => s.full_name && s.grade > 0);
                 
                 const res = await fetch(`${API_URL}/admin/import`, { 
@@ -747,6 +747,7 @@
                     <div style="background: #dcfce7; border: 2px solid #22c55e; padding: 1rem; border-radius: 0.5rem; margin-top: 1rem;">
                         <h4>✅ Importación exitosa</h4>
                         <p><strong>Importados:</strong> ${result.imported} estudiantes</p>
+                        <p><strong>Grupos (Grado-Curso):</strong> ${result.groups}</p>
                         ${result.errors && result.errors.length > 0 ? `<details style="margin-top: 0.5rem;"><summary>Ver advertencias (${result.errors.length})</summary><ul style="margin-top: 0.5rem; font-size: 0.875rem;">${result.errors.slice(0, 10).map(e => `<li>${e}</li>`).join('')}</ul></details>` : ''}
                     </div>
                 `;
