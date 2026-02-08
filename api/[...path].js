@@ -272,15 +272,15 @@ async function handleElection(req, res) {
   return res.status(200).json({ success: true, status: action === 'open' ? 'open' : 'closed' });
 }
 
+// FUNCIÓN CORREGIDA: Asigna números de lista secuenciales por grado-curso
 async function importStudents(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
   
   const { students } = req.body || {};
   
-  console.log('Recibidos datos:', students);
+  console.log('Recibidos datos:', students.length, 'estudiantes');
   
   if (!Array.isArray(students)) {
-    console.error('No es un array:', typeof students);
     return res.status(400).json({ error: 'Formato inválido: se esperaba un array de estudiantes' });
   }
   
@@ -288,60 +288,80 @@ async function importStudents(req, res) {
     return res.status(400).json({ error: 'No hay estudiantes para importar' });
   }
 
-  const validStudents = [];
-  const errors = [];
-
-  for (let i = 0; i < students.length; i++) {
-    const s = students[i];
+  // PASO 1: Agrupar por grado y curso
+  const groupedByGradeCourse = {};
+  
+  students.forEach((s) => {
+    const nombre = s.full_name;
+    const grado = parseInt(s.grade);
+    const curso = parseInt(s.course) || 1;
     
-    const nombre = s.full_name || s.Nombre || s.nombre || s.Name || s.name || s.Estudiante || s.estudiante;
-    const grado = s.grade || s.Grado || s.grado || s.Grade || s.grade;
-    const curso = s.course || s.Curso || s.curso || s.Course || s.course || s.paralelo || s.Paralelo || 1;
-    const lista = s.list_number || s.Lista || s.lista || s.List || s.list || s.Numero || s.numero || s['No.'] || (i + 1);
-
-    if (!nombre || !grado) {
-      errors.push(`Fila ${i + 1}: Falta nombre o grado`);
-      continue;
+    // Validar datos mínimos
+    if (!nombre || !grado || isNaN(grado)) {
+      console.log('Estudiante inválido:', s);
+      return; // Saltar este estudiante
     }
-
-    const gradeNum = parseInt(grado);
-    const courseNum = parseInt(curso) || 1;
-    const listNum = parseInt(lista) || (i + 1);
-
-    if (isNaN(gradeNum) || gradeNum < 1 || gradeNum > 12) {
-      errors.push(`Fila ${i + 1}: Grado inválido "${grado}"`);
-      continue;
+    
+    const key = `${grado}-${curso}`;
+    
+    if (!groupedByGradeCourse[key]) {
+      groupedByGradeCourse[key] = {
+        grade: grado,
+        course: curso,
+        students: []
+      };
     }
-
-    validStudents.push({
+    
+    groupedByGradeCourse[key].students.push({
       full_name: String(nombre).trim(),
-      grade: gradeNum,
-      course: courseNum,
-      list_number: listNum
+      grade: grado,
+      course: curso
+    });
+  });
+
+  console.log('Grupos detectados:', Object.keys(groupedByGradeCourse));
+
+  // PASO 2: Asignar números de lista secuenciales (1, 2, 3...) para cada grupo
+  const studentsWithListNumber = [];
+  
+  for (const [key, group] of Object.entries(groupedByGradeCourse)) {
+    console.log(`Grupo ${key}: ${group.students.length} estudiantes`);
+    
+    group.students.forEach((student, idx) => {
+      const listNumber = idx + 1; // 1, 2, 3... reinicia para cada grado-curso
+      const accessCode = `${student.grade}${student.course}${String(listNumber).padStart(2, '0')}`;
+      
+      studentsWithListNumber.push({
+        full_name: student.full_name,
+        grade: student.grade,
+        course: student.course,
+        list_number: listNumber,
+        access_code: accessCode
+      });
     });
   }
 
-  console.log('Estudiantes válidos:', validStudents.length);
+  console.log('Total a insertar:', studentsWithListNumber.length);
+  console.log('Primeros 5:', studentsWithListNumber.slice(0, 5).map(s => `${s.full_name}: ${s.access_code}`));
+  console.log('Últimos 5:', studentsWithListNumber.slice(-5).map(s => `${s.full_name}: ${s.access_code}`));
 
-  if (validStudents.length === 0) {
-    return res.status(400).json({ 
-      error: 'No hay estudiantes válidos para importar',
-      details: errors.slice(0, 5)
-    });
-  }
-
+  // PASO 3: Insertar en la base de datos
   const batchSize = 50;
   let inserted = 0;
   const insertErrors = [];
 
-  for (let i = 0; i < validStudents.length; i += batchSize) {
-    const batch = validStudents.slice(i, i + batchSize);
+  for (let i = 0; i < studentsWithListNumber.length; i += batchSize) {
+    const batch = studentsWithListNumber.slice(i, i + batchSize);
     
     try {
-      const { data, error } = await supabase.from('students').insert(batch).select('id, full_name, grade, course, list_number, access_code');
+      const { data, error } = await supabase
+        .from('students')
+        .insert(batch)
+        .select('id, full_name, grade, course, list_number, access_code');
 
       if (error) {
         console.error('Error en batch:', error);
+        // Intentar uno por uno
         for (const student of batch) {
           const { error: singleError } = await supabase.from('students').insert(student);
           if (singleError) {
@@ -352,6 +372,7 @@ async function importStudents(req, res) {
         }
       } else {
         inserted += data.length;
+        console.log(`✓ Insertados ${data.length} estudiantes en batch`);
       }
     } catch (err) {
       console.error('Error excepción:', err);
@@ -363,9 +384,10 @@ async function importStudents(req, res) {
     success: true,
     imported: inserted,
     total: students.length,
-    valid: validStudents.length,
-    errors: [...errors, ...insertErrors].slice(0, 10),
-    hasErrors: errors.length > 0 || insertErrors.length > 0
+    valid: studentsWithListNumber.length,
+    groups: Object.keys(groupedByGradeCourse).length,
+    errors: insertErrors.slice(0, 10),
+    hasErrors: insertErrors.length > 0
   });
 }
 
