@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Votación Escolar 2026</title>
+    <title>Votación Escolar 2025</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; line-height: 1.6; min-height: 100vh; }
         .container { max-width: 800px; margin: 0 auto; padding: 1rem; }
+        .school-header { text-align: center; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .school-logo { width: 80px; height: 80px; object-fit: contain; margin-bottom: 0.5rem; }
+        .school-name { font-size: 1.25rem; font-weight: bold; color: #1e40af; }
         .header { text-align: center; margin-bottom: 2rem; padding: 1rem; }
         .header h1 { font-size: 1.5rem; color: #0f172a; margin-bottom: 0.5rem; }
         .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; }
@@ -35,6 +38,8 @@
         .candidate-card { background: white; border: 2px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; cursor: pointer; transition: all 0.2s; text-align: center; }
         .candidate-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .candidate-card.selected { border-color: #10b981; background: #ecfdf5; }
+        .candidate-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 0.75rem; border: 3px solid #e2e8f0; }
+        .candidate-card.selected .candidate-photo { border-color: #10b981; }
         .candidate-card h3 { font-size: 1.125rem; margin-bottom: 0.25rem; }
         .candidate-card p { color: #475569; font-size: 0.875rem; }
         .selected-box { background: #ecfdf5; border: 2px solid #10b981; padding: 1.5rem; border-radius: 0.5rem; text-align: center; margin-top: 1.5rem; }
@@ -45,13 +50,18 @@
         .error-icon { width: 80px; height: 80px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1.5rem; }
         .error-message { color: #ef4444; margin-top: 1rem; font-size: 0.875rem; min-height: 1.5rem; }
         .note { color: #475569; font-size: 0.875rem; margin-top: 1.5rem; }
-        @media (max-width: 640px) { .container { padding: 0.5rem; } .card { padding: 1rem; } .button-group { grid-template-columns: 1fr; } input[type="text"] { font-size: 16px; } }
+        @media (max-width: 640px) { .container { padding: 0.5rem; } .card { padding: 1rem; } .button-group { grid-template-columns: 1fr; } input[type="text"] { font-size: 16px; } .school-logo { width: 60px; height: 60px; } }
         .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
+        <div id="school-header" class="school-header" style="display: none;">
+            <img id="school-logo" class="school-logo" src="" alt="Escudo del colegio">
+            <div id="school-name" class="school-name"></div>
+        </div>
+
         <header class="header">
             <h1>🗳️ Votación Escolar</h1>
             <div id="status-badge" class="badge closed">Cerrada</div>
@@ -118,6 +128,7 @@
         let selectedCandidate = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
+            await loadSchoolInfo();
             await checkElectionStatus();
             document.getElementById('btn-verify').addEventListener('click', verifyCode);
             document.getElementById('access-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyCode(); });
@@ -125,6 +136,28 @@
             document.getElementById('btn-continue').addEventListener('click', () => showStep('step-vote'));
             document.getElementById('btn-cast').addEventListener('click', castVote);
         });
+
+        async function loadSchoolInfo() {
+            try {
+                const res = await fetch(`${API_URL}/check-status`);
+                const data = await res.json();
+                
+                if (data.school_logo || data.school_name) {
+                    const header = document.getElementById('school-header');
+                    header.style.display = 'block';
+                    
+                    if (data.school_logo) {
+                        const logo = document.getElementById('school-logo');
+                        logo.src = data.school_logo;
+                        logo.style.display = 'block';
+                    }
+                    
+                    if (data.school_name) {
+                        document.getElementById('school-name').textContent = data.school_name;
+                    }
+                }
+            } catch (err) { console.error('Error cargando info del colegio:', err); }
+        }
 
         async function checkElectionStatus() {
             try {
@@ -162,7 +195,11 @@
                 container.innerHTML = '';
                 data.candidates.forEach(candidate => {
                     const card = document.createElement('div'); card.className = 'candidate-card';
-                    card.innerHTML = `<h3>${candidate.name}</h3>${candidate.party ? `<p>${candidate.party}</p>` : ''}`;
+                    card.innerHTML = `
+                        ${candidate.photo_url ? `<img src="${candidate.photo_url}" class="candidate-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'" alt="${candidate.name}"><div style="display:none; width:100px; height:100px; background:#e2e8f0; border-radius:50%; margin:0 auto 0.75rem; align-items:center; justify-content:center; color:#64748b; font-size:0.75rem;">Sin foto</div>` : '<div style="width:100px; height:100px; background:#e2e8f0; border-radius:50%; margin:0 auto 0.75rem; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:0.75rem;">Sin foto</div>'}
+                        <h3>${candidate.name}</h3>
+                        ${candidate.party ? `<p>${candidate.party}</p>` : ''}
+                    `;
                     card.onclick = () => selectCandidate(candidate, card); container.appendChild(card);
                 });
             } catch (err) { container.innerHTML = '<p class="error-message">Error al cargar candidatos</p>'; }
