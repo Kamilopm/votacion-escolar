@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Votación Escolar</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: white; padding: 2rem; border-radius: 0.5rem; width: 90%; max-width: 400px; }
+        .login-box h2 { margin-bottom: 1rem; }
+        .login-box input { width: 100%; padding: 0.75rem; margin: 0.5rem 0; border: 2px solid #e2e8f0; border-radius: 0.375rem; }
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #3b82f6; color: white; width: 100%; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-warning { background: #f59e0b; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .header { background: white; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .admin-nav { background: #1e293b; padding: 1rem; margin: 0 -1rem 2rem -1rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+        .admin-nav button { background: #334155; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; }
+        .admin-nav button.active { background: #3b82f6; }
+        .section { display: none; background: white; padding: 1.5rem; border-radius: 0.5rem; }
+        .section.active { display: block; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 0.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; border: 2px solid #e2e8f0; }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: #3b82f6; }
+        .stat-label { color: #64748b; margin-top: 0.5rem; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 0.5rem; overflow: hidden; margin-top: 1rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f8fafc; font-weight: 600; }
+        .import-area { border: 2px dashed #cbd5e1; padding: 2rem; text-align: center; border-radius: 0.5rem; margin: 1rem 0; }
+        .progress-bar { width: 100%; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; margin-top: 0.5rem; }
+        .progress-fill { height: 100%; background: #3b82f6; transition: width 0.3s; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 0.375rem; margin: 0.5rem 0; }
+        .card { background: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; }
+    </style>
+</head>
+<body>
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-box">
+            <h2>🔐 Acceso Administrativo</h2>
+            <p>Ingresa el código de administrador</p>
+            <input type="password" id="admin-code" placeholder="Código admin">
+            <button onclick="login()" class="btn btn-primary">Ingresar</button>
+            <p id="login-error" style="color: #ef4444; margin-top: 1rem;"></p>
+        </div>
+    </div>
+
+    <div class="container" id="admin-container" style="display: none;">
+        <div class="header">
+            <h1>⚙️ Panel de Administración</h1>
+            <div style="display: flex; gap: 1rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap;">
+                <span id="election-status">Estado: Cerrada</span>
+                <button id="btn-toggle" class="btn btn-primary" onclick="toggleElection()">Abrir Votación</button>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <button onclick="showSection('dashboard')" class="active">Dashboard</button>
+            <button onclick="showSection('students')">Estudiantes</button>
+            <button onclick="showSection('candidates')">Candidatos</button>
+            <button onclick="showSection('import')">Importar Excel</button>
+        </nav>
+
+        <section id="sec-dashboard" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-number" id="stat-total">0</div><div class="stat-label">Total Estudiantes</div></div>
+                <div class="stat-card"><div class="stat-number" id="stat-voted">0</div><div class="stat-label">Han Votado</div></div>
+                <div class="stat-card"><div class="stat-number" id="stat-participation">0%</div><div class="stat-label">Participación</div></div>
+                <div class="stat-card"><div class="stat-number" id="stat-candidates">0</div><div class="stat-label">Candidatos</div></div>
+            </div>
+            <h3>Participación por Grado</h3>
+            <div id="grade-stats"></div>
+            <h3 style="margin-top: 2rem;">Resultados</h3>
+            <div id="results-list"></div>
+        </section>
+
+        <section id="sec-students" class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h2>Gestión de Estudiantes</h2>
+                <div>
+                    <button onclick="resetCodes()" class="btn btn-warning" style="font-size: 0.875rem;">Regenerar Códigos</button>
+                    <button onclick="clearAllData()" class="btn btn-danger" style="font-size: 0.875rem;">Eliminar Todo</button>
+                </div>
+            </div>
+            <div id="students-table-container"></div>
+        </section>
+
+        <section id="sec-candidates" class="section">
+            <h2>Gestión de Candidatos</h2>
+            <div class="card">
+                <h3>Agregar Candidato</h3>
+                <input type="text" id="new-candidate-name" placeholder="Nombre completo">
+                <input type="text" id="new-candidate-party" placeholder="Partido/Lista (opcional)">
+                <button onclick="addCandidate()" class="btn btn-primary" style="width: auto;">Agregar</button>
+            </div>
+            <div id="candidates-list-admin"></div>
+        </section>
+
+        <section id="sec-import" class="section">
+            <h2>Importar desde Excel</h2>
+            <div class="card">
+                <p><strong>Formato esperado:</strong></p>
+                <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                    <li>Columnas: Nombre, Grado, Curso, Lista (opcional)</li>
+                    <li>Formatos: .xlsx, .xls, .csv</li>
+                </ul>
+                <div class="import-area">
+                    <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display: none;">
+                    <button onclick="document.getElementById('excel-file').click()" class="btn btn-primary">Seleccionar Archivo</button>
+                    <p style="margin-top: 1rem; color: #64748b;" id="file-name"></p>
+                </div>
+                <div id="import-preview"></div>
+                <button id="btn-import" onclick="importStudents()" class="btn btn-success" style="display: none; width: 100%;">Importar Estudiantes</button>
+                <div id="import-result"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        let adminCode = localStorage.getItem('admin_code') || '';
+        let excelData = [];
+
+        if (adminCode) document.getElementById('admin-code').value = adminCode;
+
+        async function login() {
+            const code = document.getElementById('admin-code').value.trim();
+            const errorDiv = document.getElementById('login-error');
+            try {
+                const res = await fetch(`${API_URL}/admin/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': code }, body: JSON.stringify({ admin_code: code }) });
+                if (res.ok) {
+                    adminCode = code; localStorage.setItem('admin_code', code);
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('admin-container').style.display = 'block';
+                    loadDashboard();
+                } else { errorDiv.textContent = 'Código incorrecto'; }
+            } catch (err) { errorDiv.textContent = 'Error de conexión'; }
+        }
+
+        function showSection(section) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.admin-nav button').forEach(b => b.classList.remove('active'));
+            document.getElementById(`sec-${section}`).classList.add('active');
+            event.target.classList.add('active');
+            if (section === 'dashboard') loadDashboard();
+            if (section === 'students') loadStudents();
+            if (section === 'candidates') loadCandidates();
+        }
+
+        async function loadDashboard() {
+            try {
+                const res = await fetch(`${API_URL}/stats`, { headers: { 'x-admin-code': adminCode } });
+                const data = await res.json();
+                document.getElementById('stat-total').textContent = data.general.totalStudents;
+                document.getElementById('stat-voted').textContent = data.general.totalVoted;
+                document.getElementById('stat-participation').textContent = data.general.participation + '%';
+                document.getElementById('stat-candidates').textContent = data.results?.length || 0;
+                
+                const gradeContainer = document.getElementById('grade-stats');
+                gradeContainer.innerHTML = data.byGrade.map(g => `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                            <span>Grado ${g.grade}°</span>
+                            <span>${g.voted}/${g.total_students} (${g.participation_percent}%)</span>
+                        </div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${g.participation_percent}%"></div></div>
+                    </div>
+                `).join('');
+
+                const resultsContainer = document.getElementById('results-list');
+                if (data.results && data.results.length > 0) {
+                    const maxVotes = Math.max(...data.results.map(r => r.votes));
+                    resultsContainer.innerHTML = `<table><thead><tr><th>Candidato</th><th>Partido</th><th>Votos</th><th>%</th></tr></thead><tbody>
+                        ${data.results.map(r => `<tr style="${r.votes === maxVotes && r.votes > 0 ? 'background: #ecfdf5;' : ''}"><td><strong>${r.name}</strong></td><td>${r.party || '-'}</td><td>${r.votes}</td><td>${r.percentage}%</td></tr>`).join('')}
+                    </tbody></table>`;
+                } else { resultsContainer.innerHTML = '<p>No hay candidatos registrados</p>'; }
+            } catch (err) { console.error('Error:', err); }
+        }
+
+        async function toggleElection() {
+            const btn = document.getElementById('btn-toggle');
+            const currentStatus = btn.textContent.includes('Abrir') ? 'close' : 'open';
+            const newStatus = currentStatus === 'open' ? 'close' : 'open';
+            try {
+                const res = await fetch(`${API_URL}/admin/election`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ action: newStatus === 'open' ? 'open' : 'close', admin_code: adminCode }) });
+                if (res.ok) updateElectionButton(newStatus === 'open');
+            } catch (err) { alert('Error al cambiar estado'); }
+        }
+
+        function updateElectionButton(isOpen) {
+            const btn = document.getElementById('btn-toggle');
+            const status = document.getElementById('election-status');
+            if (isOpen) { btn.textContent = 'Cerrar Votación'; btn.className = 'btn btn-danger'; status.textContent = 'Estado: Abierta'; status.style.color = '#10b981'; }
+            else { btn.textContent = 'Abrir Votación'; btn.className = 'btn btn-primary'; status.textContent = 'Estado: Cerrada'; status.style.color = '#64748b'; }
+        }
+
+        async function loadStudents() {
+            try {
+                const res = await fetch(`${API_URL}/admin/students`, { headers: { 'x-admin-code': adminCode } });
+                const data = await res.json();
+                const container = document.getElementById('students-table-container');
+                if (!data.students || data.students.length === 0) { container.innerHTML = '<p>No hay estudiantes registrados</p>'; return; }
+                container.innerHTML = `<table><thead><tr><th>Código</th><th>Nombre</th><th>Grado</th><th>Curso</th><th>Lista</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+                    ${data.students.map(s => `<tr><td><code>${s.access_code}</code></td><td>${s.full_name}</td><td>${s.grade}°</td><td>${s.course}</td><td>${s.list_number}</td><td>${s.has_voted ? '✓ Votó' : 'Pendiente'}</td><td><button onclick="deleteStudent('${s.id}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Eliminar</button></td></tr>`).join('')}
+                </tbody></table>`;
+            } catch (err) { console.error('Error:', err); }
+        }
+
+        async function deleteStudent(id) {
+            if (!confirm('¿Eliminar este estudiante?')) return;
+            try { const res = await fetch(`${API_URL}/admin/students`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ id, admin_code: adminCode }) }); if (res.ok) loadStudents(); } 
+            catch (err) { alert('Error al eliminar'); }
+        }
+
+        async function resetCodes() {
+            if (!confirm('¿Regenerar todos los códigos?')) return;
+            try { const res = await fetch(`${API_URL}/admin/reset-codes`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ admin_code: adminCode }) }); if (res.ok) { alert('Códigos regenerados'); loadStudents(); } } 
+            catch (err) { alert('Error'); }
+        }
+
+        async function clearAllData() {
+            const confirm = prompt('Escribe ELIMINAR TODO para confirmar:');
+            if (confirm !== 'ELIMINAR TODO') return;
+            try { const res = await fetch(`${API_URL}/admin/clear-data`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ confirm: 'ELIMINAR TODO', admin_code: adminCode }) }); if (res.ok) { alert('Datos eliminados'); location.reload(); } } 
+            catch (err) { alert('Error'); }
+        }
+
+        async function loadCandidates() {
+            try {
+                const res = await fetch(`${API_URL}/admin/candidates`, { headers: { 'x-admin-code': adminCode } });
+                const data = await res.json();
+                const container = document.getElementById('candidates-list-admin');
+                if (!data.candidates || data.candidates.length === 0) { container.innerHTML = '<p>No hay candidatos registrados</p>'; return; }
+                container.innerHTML = `<table><thead><tr><th>Nombre</th><th>Partido</th><th>Votos</th><th>Acción</th></tr></thead><tbody>
+                    ${data.candidates.map(c => `<tr><td>${c.name}</td><td>${c.party || '-'}</td><td>${c.votes}</td><td><button onclick="deleteCandidate('${c.id}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.875rem;">Eliminar</button></td></tr>`).join('')}
+                </tbody></table>`;
+            } catch (err) { console.error('Error:', err); }
+        }
+
+        async function addCandidate() {
+            const name = document.getElementById('new-candidate-name').value.trim();
+            const party = document.getElementById('new-candidate-party').value.trim();
+            if (!name) { alert('Ingresa un nombre'); return; }
+            try { const res = await fetch(`${API_URL}/admin/candidates`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ name, party, admin_code: adminCode }) }); if (res.ok) { document.getElementById('new-candidate-name').value = ''; document.getElementById('new-candidate-party').value = ''; loadCandidates(); } } 
+            catch (err) { alert('Error'); }
+        }
+
+        async function deleteCandidate(id) {
+            if (!confirm('¿Eliminar este candidato?')) return;
+            try { const res = await fetch(`${API_URL}/admin/candidates`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ id, admin_code: adminCode }) }); if (res.ok) loadCandidates(); } 
+            catch (err) { alert('Error'); }
+        }
+
+        document.getElementById('excel-file')?.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('file-name').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    processExcelData(jsonData);
+                } catch (err) { alert('Error al leer archivo: ' + err.message); }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processExcelData(data) {
+            const mapped = data.map((row, index) => {
+                const keys = Object.keys(row);
+                const nameKey = keys.find(k => k.toLowerCase().includes('nombre') || k.toLowerCase().includes('name') || k.toLowerCase().includes('estudiante'));
+                const gradeKey = keys.find(k => k.toLowerCase().includes('grado') || k.toLowerCase().includes('curso') || k.toLowerCase().includes('nivel'));
+                const courseKey = keys.find(k => k.toLowerCase().includes('paralelo') || k.toLowerCase().includes('sección') || k.toLowerCase().includes('course') || k.toLowerCase().includes('aula'));
+                const listKey = keys.find(k => k.toLowerCase().includes('lista') || k.toLowerCase().includes('número') || k.toLowerCase().includes('numero') || k.toLowerCase().includes('list'));
+                return { full_name: row[nameKey] || '', grade: parseInt(row[gradeKey]) || 0, course: parseInt(row[courseKey]) || 0, list_number: parseInt(row[listKey]) || (index + 1), raw: row };
+            }).filter(s => s.full_name && s.grade > 0 && s.course > 0);
+            
+            excelData = mapped;
+            const preview = document.getElementById('import-preview');
+            preview.innerHTML = `<p><strong>${mapped.length} estudiantes válidos:</strong></p><table style="margin-top: 0.5rem; font-size: 0.875rem;"><thead><tr><th>Nombre</th><th>Grado</th><th>Curso</th><th>Lista</th><th>Código</th></tr></thead><tbody>
+                ${mapped.slice(0, 5).map(s => `<tr><td>${s.full_name}</td><td>${s.grade}</td><td>${s.course}</td><td>${s.list_number}</td><td><code>${s.grade}${s.course}${String(s.list_number).padStart(2, '0')}</code></td></tr>`).join('')}
+                ${mapped.length > 5 ? `<tr><td colspan="5">... y ${mapped.length - 5} más</td></tr>` : ''}
+            </tbody></table>`;
+            document.getElementById('btn-import').style.display = 'block';
+        }
+
+        async function importStudents() {
+            if (excelData.length === 0) return;
+            const btn = document.getElementById('btn-import'); btn.disabled = true; btn.textContent = 'Importando...';
+            try {
+                const res = await fetch(`${API_URL}/admin/import`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-code': adminCode }, body: JSON.stringify({ students: excelData, admin_code: adminCode }) });
+                const result = await res.json();
+                const resultDiv = document.getElementById('import-result');
+                resultDiv.innerHTML = `<div class="card" style="margin-top: 1rem; background: ${result.errors ? '#fef3c7' : '#ecfdf5'};"><p><strong>Importados:</strong> ${result.imported} de ${result.total}</p>${result.errors ? `<p style="color: #92400e;"><strong>Errores:</strong> ${result.errors.length}</p>` : ''}</div>`;
+                if (result.imported > 0) { excelData = []; document.getElementById('btn-import').style.display = 'none'; document.getElementById('excel-file').value = ''; }
+            } catch (err) { alert('Error al importar: ' + err.message); }
+            finally { btn.disabled = false; btn.textContent = 'Importar Estudiantes'; }
+        }
+    </script>
+</body>
+</html>
