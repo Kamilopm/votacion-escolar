@@ -3,65 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Votación Escolar 2025</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; line-height: 1.6; min-height: 100vh; }
-        .container { max-width: 800px; margin: 0 auto; padding: 1rem; }
-        .school-header { text-align: center; margin-bottom: 1.5rem; padding: 1rem; background: white; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .school-logo { width: 80px; height: 80px; object-fit: contain; margin-bottom: 0.5rem; }
-        .school-name { font-size: 1.25rem; font-weight: bold; color: #1e40af; }
-        .header { text-align: center; margin-bottom: 2rem; padding: 1rem; }
-        .header h1 { font-size: 1.5rem; color: #0f172a; margin-bottom: 0.5rem; }
-        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; }
-        .badge.closed { background: #e2e8f0; color: #475569; }
-        .badge.open { background: #10b981; color: white; }
-        .card { background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
-        .card h2 { font-size: 1.25rem; margin-bottom: 1rem; color: #0f172a; }
-        .step { display: none; animation: fadeIn 0.3s ease; }
-        .step.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .input-group { margin: 1.5rem 0; }
-        input[type="text"] { width: 100%; padding: 1rem; font-size: 1.25rem; border: 2px solid #e2e8f0; border-radius: 0.5rem; text-align: center; transition: border-color 0.2s; }
-        input[type="text"]:focus { outline: none; border-color: #3b82f6; }
-        .hint { color: #475569; font-size: 0.875rem; margin-bottom: 1rem; }
-        .btn { display: inline-block; padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; text-align: center; width: 100%; }
-        .btn-primary { background: #3b82f6; color: white; }
-        .btn-primary:hover { background: #2563eb; }
-        .btn-secondary { background: #e2e8f0; color: #1e293b; }
-        .btn-success { background: #10b981; color: white; }
-        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
-        .info-box { background: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; }
-        .info-box p { margin: 0.25rem 0; }
-        .warning { color: #f59e0b; font-weight: 600; margin: 1rem 0; }
-        .candidates-grid { display: grid; gap: 1rem; margin: 1.5rem 0; }
-        .candidate-card { background: white; border: 2px solid #e2e8f0; border-radius: 0.5rem; padding: 1.25rem; cursor: pointer; transition: all 0.2s; text-align: center; }
-        .candidate-card:hover { border-color: #3b82f6; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .candidate-card.selected { border-color: #10b981; background: #ecfdf5; }
-        .candidate-photo { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; margin-bottom: 0.75rem; border: 3px solid #e2e8f0; }
-        .candidate-card.selected .candidate-photo { border-color: #10b981; }
-        .candidate-card h3 { font-size: 1.125rem; margin-bottom: 0.25rem; }
-        .candidate-card p { color: #475569; font-size: 0.875rem; }
-        .selected-box { background: #ecfdf5; border: 2px solid #10b981; padding: 1.5rem; border-radius: 0.5rem; text-align: center; margin-top: 1.5rem; }
-        .hidden { display: none !important; }
-        .success-card { text-align: center; padding: 3rem 1.5rem; }
-        .success-icon { width: 80px; height: 80px; background: #10b981; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1.5rem; }
-        .error-card { text-align: center; padding: 3rem 1.5rem; }
-        .error-icon { width: 80px; height: 80px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 1.5rem; }
-        .error-message { color: #ef4444; margin-top: 1rem; font-size: 0.875rem; min-height: 1.5rem; }
-        .note { color: #475569; font-size: 0.875rem; margin-top: 1.5rem; }
-        @media (max-width: 640px) { .container { padding: 0.5rem; } .card { padding: 1rem; } .button-group { grid-template-columns: 1fr; } input[type="text"] { font-size: 16px; } .school-logo { width: 60px; height: 60px; } }
-        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+    <title>Votación Escolar</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <div class="container">
-        <div id="school-header" class="school-header" style="display: none;">
-            <img id="school-logo" class="school-logo" src="" alt="Escudo del colegio">
-            <div id="school-name" class="school-name"></div>
-        </div>
-
         <header class="header">
             <h1>🗳️ Votación Escolar</h1>
             <div id="status-badge" class="badge closed">Cerrada</div>
@@ -70,11 +16,23 @@
         <section id="step-verify" class="step active">
             <div class="card">
                 <h2>Ingresa tu Código de Votación</h2>
-                <p class="hint">El código está en tu credencial: Grado+Curso+Lista</p>
+                <p class="hint">El código está en tu credencial: Grado + Curso + Lista</p>
+
                 <div class="input-group">
-                    <input type="text" id="access-code" placeholder="Ej: 6112" maxlength="5" inputmode="numeric" pattern="\d*">
+                    <input
+                        type="text"
+                        id="access-code"
+                        placeholder="Ej: 6112"
+                        maxlength="5"
+                        inputmode="numeric"
+                        pattern="\\d*"
+                    >
                 </div>
-                <button id="btn-verify" class="btn btn-primary">Verificar Código</button>
+
+                <button id="btn-verify" class="btn btn-primary btn-large">
+                    Verificar Código
+                </button>
+
                 <div id="verify-error" class="error-message"></div>
             </div>
         </section>
@@ -83,7 +41,9 @@
             <div class="card">
                 <h2>Confirma tus Datos</h2>
                 <div id="student-info" class="info-box"></div>
+
                 <p class="warning">⚠️ Solo puedes votar una vez. ¿Son correctos tus datos?</p>
+
                 <div class="button-group">
                     <button id="btn-back" class="btn btn-secondary">No, corregir</button>
                     <button id="btn-continue" class="btn btn-primary">Sí, continuar</button>
@@ -95,9 +55,12 @@
             <div class="card">
                 <h2>Selecciona tu Candidato</h2>
                 <div id="candidates-list" class="candidates-grid"></div>
+
                 <div id="selected-candidate" class="selected-box hidden">
                     <p>Has seleccionado: <strong id="selected-name"></strong></p>
-                    <button id="btn-cast" class="btn btn-success">Confirmar Voto ✓</button>
+                    <button id="btn-cast" class="btn btn-success btn-large">
+                        Confirmar Voto ✓
+                    </button>
                 </div>
             </div>
         </section>
@@ -117,115 +80,13 @@
                 <div class="error-icon">✕</div>
                 <h2 id="error-title">Error</h2>
                 <p id="error-message"></p>
-                <button onclick="location.reload()" class="btn btn-primary">Intentar de nuevo</button>
+                <button onclick="location.reload()" class="btn btn-primary">
+                    Intentar de nuevo
+                </button>
             </div>
         </section>
     </div>
 
-    <script>
-        const API_URL = '/api';
-        let currentStudent = null;
-        let selectedCandidate = null;
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadSchoolInfo();
-            await checkElectionStatus();
-            document.getElementById('btn-verify').addEventListener('click', verifyCode);
-            document.getElementById('access-code').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyCode(); });
-            document.getElementById('btn-back').addEventListener('click', () => showStep('step-verify'));
-            document.getElementById('btn-continue').addEventListener('click', () => showStep('step-vote'));
-            document.getElementById('btn-cast').addEventListener('click', castVote);
-        });
-
-        async function loadSchoolInfo() {
-            try {
-                const res = await fetch(`${API_URL}/check-status`);
-                const data = await res.json();
-                
-                if (data.school_logo || data.school_name) {
-                    const header = document.getElementById('school-header');
-                    header.style.display = 'block';
-                    
-                    if (data.school_logo) {
-                        const logo = document.getElementById('school-logo');
-                        logo.src = data.school_logo;
-                        logo.style.display = 'block';
-                    }
-                    
-                    if (data.school_name) {
-                        document.getElementById('school-name').textContent = data.school_name;
-                    }
-                }
-            } catch (err) { console.error('Error cargando info del colegio:', err); }
-        }
-
-        async function checkElectionStatus() {
-            try {
-                const res = await fetch(`${API_URL}/check-status`);
-                const data = await res.json();
-                const badge = document.getElementById('status-badge');
-                if (data.open) { badge.textContent = 'Abierta'; badge.className = 'badge open'; } 
-                else { badge.textContent = 'Cerrada'; badge.className = 'badge closed'; showError('La votación está cerrada', 'El administrador debe abrir la votación desde el panel.'); }
-            } catch (err) { showError('Error de conexión', 'No se pudo conectar con el servidor.'); }
-        }
-
-        async function verifyCode() {
-            const code = document.getElementById('access-code').value.trim();
-            const errorDiv = document.getElementById('verify-error');
-            const btn = document.getElementById('btn-verify');
-            if (!code || code.length < 3) { errorDiv.textContent = 'Ingresa un código válido'; return; }
-            btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Verificando...';
-            try {
-                const res = await fetch(`${API_URL}/verify-code`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_code: code }) });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Error al verificar');
-                currentStudent = { ...data.student, access_code: code };
-                document.getElementById('student-info').innerHTML = `<p><strong>Nombre:</strong> ${data.student.name}</p><p><strong>Grado:</strong> ${data.student.grade}°</p><p><strong>Curso:</strong> ${data.student.course}</p>`;
-                showStep('step-confirm');
-            } catch (err) { errorDiv.textContent = err.message; } 
-            finally { btn.disabled = false; btn.textContent = 'Verificar Código'; }
-        }
-
-        async function loadCandidates() {
-            const container = document.getElementById('candidates-list');
-            container.innerHTML = '<p>Cargando candidatos...</p>';
-            try {
-                const res = await fetch(`${API_URL}/get-candidates`);
-                const data = await res.json();
-                container.innerHTML = '';
-                data.candidates.forEach(candidate => {
-                    const card = document.createElement('div'); card.className = 'candidate-card';
-                    card.innerHTML = `
-                        ${candidate.photo_url ? `<img src="${candidate.photo_url}" class="candidate-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'" alt="${candidate.name}"><div style="display:none; width:100px; height:100px; background:#e2e8f0; border-radius:50%; margin:0 auto 0.75rem; align-items:center; justify-content:center; color:#64748b; font-size:0.75rem;">Sin foto</div>` : '<div style="width:100px; height:100px; background:#e2e8f0; border-radius:50%; margin:0 auto 0.75rem; display:flex; align-items:center; justify-content:center; color:#64748b; font-size:0.75rem;">Sin foto</div>'}
-                        <h3>${candidate.name}</h3>
-                        ${candidate.party ? `<p>${candidate.party}</p>` : ''}
-                    `;
-                    card.onclick = () => selectCandidate(candidate, card); container.appendChild(card);
-                });
-            } catch (err) { container.innerHTML = '<p class="error-message">Error al cargar candidatos</p>'; }
-        }
-
-        function selectCandidate(candidate, cardElement) {
-            document.querySelectorAll('.candidate-card').forEach(c => c.classList.remove('selected'));
-            cardElement.classList.add('selected'); selectedCandidate = candidate;
-            document.getElementById('selected-name').textContent = candidate.name;
-            document.getElementById('selected-candidate').classList.remove('hidden');
-        }
-
-        async function castVote() {
-            if (!selectedCandidate || !currentStudent) return;
-            const btn = document.getElementById('btn-cast'); btn.disabled = true; btn.innerHTML = '<span class="loading"></span> Procesando...';
-            try {
-                const res = await fetch(`${API_URL}/cast-vote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ access_code: currentStudent.access_code, candidate_id: selectedCandidate.id }) });
-                const data = await res.json();
-                if (!res.ok || !data.success) throw new Error(data.error || 'Error al registrar voto');
-                document.getElementById('final-info').innerHTML = `<p><strong>Estudiante:</strong> ${data.student.name}</p><p><strong>Voto registrado para:</strong> ${selectedCandidate.name}</p>`;
-                showStep('step-done');
-            } catch (err) { showError('Error al votar', err.message); }
-        }
-
-        function showStep(stepId) { document.querySelectorAll('.step').forEach(s => s.classList.remove('active')); document.getElementById(stepId).classList.add('active'); if (stepId === 'step-vote') loadCandidates(); }
-        function showError(title, message) { document.getElementById('error-title').textContent = title; document.getElementById('error-message').textContent = message; showStep('step-error'); }
-    </script>
+    <script src="js/app.js"></script>
 </body>
 </html>
