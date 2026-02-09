@@ -3,20 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Administrador - Votación Escolar</title>
+<title>Panel de Administración - Votación Escolar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0 }
-.container { max-width:1200px; margin:auto; padding:20px }
+.container { max-width:1400px; margin:auto; padding:20px }
 .hidden { display:none }
 button { padding:8px 14px; margin:5px; cursor:pointer }
 table { width:100%; border-collapse:collapse; margin-top:10px }
 th,td { border:1px solid #ccc; padding:6px; text-align:left }
 th { background:#e5e7eb }
-header { background:white; padding:15px; border-radius:8px; margin-bottom:20px }
 .card { background:white; padding:15px; border-radius:8px; margin-bottom:20px }
 .danger { background:#ef4444; color:white }
-.success { background:#10b981; color:white }
 .warning { background:#f59e0b; color:white }
+.success { background:#10b981; color:white }
+header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap }
+.carnet { border:1px solid #000; padding:10px; width:260px; margin:10px; display:inline-block }
 </style>
 </head>
 
@@ -25,7 +27,7 @@ header { background:white; padding:15px; border-radius:8px; margin-bottom:20px }
 
 <!-- LOGIN -->
 <div id="loginBox" class="card">
-<h2>🔐 Acceso Administrador</h2>
+<h2>🔐 Acceso Administrativo</h2>
 <input id="adminCode" type="password" placeholder="Clave administrador">
 <br><br>
 <button onclick="login()">Ingresar</button>
@@ -35,26 +37,30 @@ header { background:white; padding:15px; border-radius:8px; margin-bottom:20px }
 <!-- PANEL -->
 <div id="panel" class="hidden">
 
-<header>
+<header class="card">
+<div>
 <h1>⚙️ Panel de Administración</h1>
 <p id="estadoVotacion">Estado: —</p>
-<button onclick="abrirCerrar()" class="warning">Abrir / Cerrar votación</button>
-<button onclick="resetearVotacion()" class="danger">♻️ RESETEAR VOTACIÓN</button>
+</div>
+<div>
+<button onclick="toggleElection()" class="warning">Abrir / Cerrar votación</button>
+<button onclick="resetearVotacion()" class="danger">♻️ REINICIAR VOTACIÓN</button>
+</div>
 </header>
 
 <div class="card">
-<h2>📋 Estudiantes</h2>
+<h2>👩‍🎓 Estudiantes</h2>
 <button onclick="cargarEstudiantes()">🔄 Actualizar</button>
-<button onclick="eliminarTodos()" class="danger">🗑️ ELIMINAR TODOS</button>
+<button onclick="eliminarTodo()" class="danger">🗑️ ELIMINAR TODO</button>
 <button onclick="imprimirCarnets()" class="success">🖨️ IMPRIMIR CARNETS</button>
 <div id="tablaEstudiantes"></div>
 </div>
 
 <div class="card">
-<h2>📥 Importar estudiantes (Excel ya procesado)</h2>
-<input type="file" id="file" accept=".json">
-<p>Sube un JSON previamente generado</p>
-<button onclick="importar()">Importar</button>
+<h2>📥 Importar Estudiantes (Excel)</h2>
+<input type="file" id="excelFile" accept=".xlsx,.xls">
+<button onclick="importarExcel()">Importar</button>
+<div id="importMsg"></div>
 </div>
 
 </div>
@@ -63,10 +69,14 @@ header { background:white; padding:15px; border-radius:8px; margin-bottom:20px }
 <script>
 const API = "/api";
 let ADMIN = "";
+let estudiantes = [];
 
 function login(){
-  ADMIN = document.getElementById("adminCode").value;
-  fetch(API+"/admin/login",{method:"POST",headers:{"x-admin-code":ADMIN}})
+  ADMIN = document.getElementById("adminCode").value.trim();
+  fetch(API+"/admin/login",{
+    method:"POST",
+    headers:{"x-admin-code":ADMIN}
+  })
   .then(r=>r.ok?r.json():Promise.reject())
   .then(()=>{
     document.getElementById("loginBox").classList.add("hidden");
@@ -86,37 +96,48 @@ function cargarEstado(){
  });
 }
 
-function abrirCerrar(){
+function toggleElection(){
  fetch(API+"/admin/election",{
   method:"POST",
-  headers:{"Content-Type":"application/json","x-admin-code":ADMIN},
-  body:JSON.stringify({action:"open"})
+  headers:{
+    "Content-Type":"application/json",
+    "x-admin-code":ADMIN
+  },
+  body:JSON.stringify({ action:"open" })
  }).then(()=>cargarEstado());
 }
 
+/* 🔁 REINICIAR VOTACIÓN COMPLETA */
 function resetearVotacion(){
- if(!confirm("⚠️ Esto borra votos y reinicia todo. ¿Continuar?")) return;
- fetch(API+"/admin/reset-election",{
+ if(!confirm("⚠️ Esto borrará TODOS los votos y permitirá votar nuevamente.\n¿Confirmas?")) return;
+ fetch(API+"/admin/clear-data",{
   method:"POST",
-  headers:{"x-admin-code":ADMIN}
+  headers:{
+    "Content-Type":"application/json",
+    "x-admin-code":ADMIN
+  },
+  body:JSON.stringify({ confirm:"ELIMINAR TODO" })
  }).then(()=>{
-  alert("Votación reiniciada");
+  alert("Votación reiniciada correctamente");
   cargarEstado();
   cargarEstudiantes();
  });
 }
 
+/* 👩‍🎓 CARGAR ESTUDIANTES */
 function cargarEstudiantes(){
- fetch(API+"/admin/students",{headers:{"x-admin-code":ADMIN}})
+ fetch(API+"/admin/students",{ headers:{ "x-admin-code":ADMIN }})
  .then(r=>r.json())
  .then(d=>{
-  let html="<table><tr><th>Código</th><th>Nombre</th><th>Grado</th><th>Curso</th></tr>";
-  d.students.forEach(s=>{
+  estudiantes = d.students || [];
+  let html="<table><tr><th>Código</th><th>Nombre</th><th>Grado</th><th>Curso</th><th>Estado</th></tr>";
+  estudiantes.forEach(s=>{
     html+=`<tr>
       <td>${s.access_code}</td>
       <td>${s.full_name}</td>
       <td>${s.grade}</td>
       <td>${s.course}</td>
+      <td>${s.has_voted ? "Votó" : "Pendiente"}</td>
     </tr>`;
   });
   html+="</table>";
@@ -124,35 +145,58 @@ function cargarEstudiantes(){
  });
 }
 
-function eliminarTodos(){
- if(!confirm("⚠️ ELIMINAR TODOS LOS ESTUDIANTES. ¿Seguro?")) return;
- fetch(API+"/admin/clear-students",{method:"POST",headers:{"x-admin-code":ADMIN}})
- .then(()=>{alert("Estudiantes eliminados"); cargarEstudiantes();});
-}
-
-function importar(){
- const f=document.getElementById("file").files[0];
- if(!f) return alert("Selecciona archivo");
- const r=new FileReader();
- r.onload=e=>{
-  const students=JSON.parse(e.target.result);
-  fetch(API+"/admin/import",{
-   method:"POST",
-   headers:{"Content-Type":"application/json","x-admin-code":ADMIN},
-   body:JSON.stringify({students})
-  }).then(()=>{alert("Importados"); cargarEstudiantes();});
- };
- r.readAsText(f);
-}
-
-function imprimirCarnets(){
- const win=window.open("");
- win.document.write("<h1>Carnets Electorales</h1>");
- document.querySelectorAll("#tablaEstudiantes tr").forEach((tr,i)=>{
-  if(i===0)return;
-  win.document.write("<div style='border:1px solid #000;padding:10px;margin:10px'>"+tr.innerHTML+"</div>");
+/* 🗑️ ELIMINAR TODO (ARREGLADO) */
+function eliminarTodo(){
+ if(!confirm("⚠️ ELIMINAR TODOS LOS ESTUDIANTES.\nEsta acción NO se puede deshacer.\n¿Continuar?")) return;
+ fetch(API+"/admin/clear-data",{
+  method:"POST",
+  headers:{
+    "Content-Type":"application/json",
+    "x-admin-code":ADMIN
+  },
+  body:JSON.stringify({ confirm:"ELIMINAR TODO" })
+ }).then(()=>{
+  alert("Todos los estudiantes eliminados");
+  cargarEstudiantes();
  });
- win.print();
+}
+
+/* 🖨️ IMPRIMIR CARNETS */
+function imprimirCarnets(){
+ if(estudiantes.length===0){ alert("No hay estudiantes"); return; }
+ const w=window.open("");
+ w.document.write("<h1>Carnets Electorales</h1>");
+ estudiantes.forEach(s=>{
+  w.document.write(`
+    <div class="carnet">
+      <strong>${s.full_name}</strong><br>
+      Grado: ${s.grade}<br>
+      Curso: ${s.course}<br>
+      Código: <strong>${s.access_code}</strong>
+    </div>
+  `);
+ });
+ w.print();
+}
+
+/* 📥 IMPORTAR EXCEL */
+function importarExcel(){
+ const file=document.getElementById("excelFile").files[0];
+ if(!file){ alert("Selecciona archivo Excel"); return; }
+ const reader=new FileReader();
+ reader.onload=e=>{
+  const wb=XLSX.read(e.target.result,{type:"binary"});
+  const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  fetch(API+"/admin/import",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-admin-code":ADMIN
+    },
+    body:JSON.stringify({ students:data })
+  }).then(()=>{ alert("Importación completa"); cargarEstudiantes(); });
+ };
+ reader.readAsBinaryString(file);
 }
 </script>
 
