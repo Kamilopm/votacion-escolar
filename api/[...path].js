@@ -267,3 +267,4 @@ async function getStats(req, res) {
     results: results || []
   });
 }
+Actualizar backend - fotos y carnets
